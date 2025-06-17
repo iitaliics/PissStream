@@ -10,7 +10,7 @@ Basics:
 """
 
 gravity = -9.81
-over_relaxation = 1.9 # between 1 and 2 1.9
+over_relaxation = 1.2 # between 1 and 2 1.9
 cnt = 0
 
 FIELD = {
@@ -34,19 +34,20 @@ class fluid:
         self.new_v = [0 for _ in range(self.num_cells)]
 
         self.p = [0 for _ in range(self.num_cells)]
-        self.s = [1 for _ in range(self.num_cells)]  # Whether the cell is solid (0) or empty (1). Used to create barriers
+        self.s = [1.0 for _ in range(self.num_cells)]  # Whether the cell is solid (0) or empty (1). Used to create barriers
         self.m = [1.0 for _ in range(self.num_cells)]
-        self.new_m = [0 for _ in range(self.num_cells)]
+        self.new_m = [1.0 for _ in range(self.num_cells)]
 
     def integrate(self, dt, grav):
-            for x in range(1, self.xNum):
+            for x in range(1, self.xNum - 1):
                 for y in range(1, self.yNum - 1):
-                    if self.s[x * self.yNum + y] == 0 and self.s[x * self.yNum + y - 1 == 0]:
+                    if self.s[x * self.yNum + y] == 1 and self.s[x * self.yNum + y - 1] == 1:
                         self.v[self.yNum * x + y] += grav * dt
+
 
     def incompressibility_solver(self, iterations, dt):
         n = self.yNum #number of items per row for a flat array
-        cp = self.density * self.height / dt #coefficient of pressure for simulation
+        # cp = self.density * self.height / dt #coefficient of pressure for simulation
 
         for _ in range(iterations):
             for i in range(1, self.xNum - 1):
@@ -69,9 +70,11 @@ class fluid:
                     #     print("divergence =", divergence)
 
                     pressure = -divergence / s
+                    
 
                     pressure *= over_relaxation
-                    self.p[i * n + j] += cp * pressure
+                    # self.p[i * n + j] += cp * pressure
+                    self.p[i * n + j] += pressure
 
                     self.u[i * n + j] -= sx0 * pressure
                     self.u[(i + 1) * n + j] += sx1 * pressure
@@ -91,6 +94,17 @@ class fluid:
         for j in range(self.yNum):
             self.v[0*n + j] = self.v[1 * n + j]
             self.v[(self.xNum - 1) * n + j] = self.v[(self.xNum - 2) * n + j] 
+
+        for i in range(1, self.xNum-1):
+            for j in range(1, self.yNum-1):
+                idx = i*self.yNum + j
+                if self.s[idx] == 0:
+                    # zero out u-velocity on the left and right faces
+                    self.u[idx] = 0
+                    self.u[(i+1)*self.yNum + j] = 0
+                    # zero out v-velocity on the top and bottom faces
+                    self.v[idx] = 0
+                    self.v[i*self.yNum + (j+1)] = 0
 
         # for i in range(1, self.xNum - 1):
         #     for j in range(1, self.yNum - 1):
@@ -165,8 +179,8 @@ class fluid:
         h = self.height
         h2 = 0.5 * h
         
-        for i in range(1, self.xNum):
-            for j in range(1, self.yNum):
+        for i in range(1, self.xNum - 1):
+            for j in range(1, self.yNum - 1):
     #			cnt++
                 
                 # u component
@@ -302,9 +316,9 @@ window_height = 25
 
 cell_height = 3
 
-tunnel = fluid(10.0, window_width, window_height, cell_height)
+tunnel = fluid(1000.0, window_width, window_height, cell_height)
 tunnel.setup_walls()
-tunnel.create_obstable(15, int(window_height / 2) + 2, 4)
+tunnel.create_obstable(15, int(window_height / 2) + 1, 4)
 
 pygame.init()
 screen = pygame.display.set_mode(((window_width * cell_height), (window_height * cell_height)))
@@ -321,7 +335,7 @@ while not (done):
     gravity = 0
     # for _ in range(12):
         # tunnel.p[_] = 0.0
-    tunnel.simulate(0.001, gravity, 100, 500)
+    tunnel.simulate(0.1, gravity, 100, 80)
     # tunnel.simulate(1.0 / 120, 9.81, 100, )
 
     
@@ -389,13 +403,13 @@ while not (done):
             # r, g, b = 0, valM, valP
             # r, g, b, = valM, valM, valM
 
-            r = colour[0] - valM
-            g = colour[1] - valM
-            b = colour[2] - valM
+            # r = colour[0] - valM
+            # g = colour[1] - valM
+            # b = colour[2] - valM
 
-            # r = colour[0] - (255 - valM)
-            # g = colour[1] - (255 - valM)
-            # b = colour[2] - (255 - valM)
+            r = colour[0] - (255 - valM)
+            g = colour[1] - (255 - valM)
+            b = colour[2] - (255 - valM)
 
             # r = colour[0]
             # g = colour[1] 
