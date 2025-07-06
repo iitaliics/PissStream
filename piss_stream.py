@@ -35,13 +35,13 @@ class fluid:
 
         self.p = [0 for _ in range(self.num_cells)]
         self.s = [1.0 for _ in range(self.num_cells)]  # Whether the cell is solid (0) or empty (1). Used to create barriers
-        self.m = [1.0 for _ in range(self.num_cells)]
-        self.new_m = [1.0 for _ in range(self.num_cells)]
+        self.m = [0.0 for _ in range(self.num_cells)]
+        self.new_m = [0.0 for _ in range(self.num_cells)]
 
     def integrate(self, dt, grav):
             for x in range(1, self.xNum - 1):
                 for y in range(1, self.yNum - 1):
-                    if self.s[x * self.yNum + y] == 1 and self.s[x * self.yNum + y - 1] == 1:
+                    if not self.s[x * self.yNum + y] == 1 and self.s[x * self.yNum + y - 1] == 1:
                         self.v[self.yNum * x + y] += grav * dt
 
 
@@ -95,16 +95,16 @@ class fluid:
             self.v[0*n + j] = self.v[1 * n + j]
             self.v[(self.xNum - 1) * n + j] = self.v[(self.xNum - 2) * n + j] 
 
-        for i in range(1, self.xNum-1):
-            for j in range(1, self.yNum-1):
-                idx = i*self.yNum + j
-                if self.s[idx] == 0:
-                    # zero out u-velocity on the left and right faces
-                    self.u[idx] = 0
-                    self.u[(i+1)*self.yNum + j] = 0
-                    # zero out v-velocity on the top and bottom faces
-                    self.v[idx] = 0
-                    self.v[i*self.yNum + (j+1)] = 0
+        # for i in range(1, self.xNum-1):
+        #     for j in range(1, self.yNum-1):
+        #         idx = i*self.yNum + j
+        #         if self.s[idx] == 0:
+        #             # zero out u-velocity on the left and right faces
+        #             self.u[idx] = 0
+        #             self.u[(i+1)*self.yNum + j] = 0
+        #             # zero out v-velocity on the top and bottom faces
+        #             self.v[idx] = 0
+        #             self.v[i*self.yNum + (j+1)] = 0
 
         # for i in range(1, self.xNum - 1):
         #     for j in range(1, self.yNum - 1):
@@ -179,8 +179,8 @@ class fluid:
         h = self.height
         h2 = 0.5 * h
         
-        for i in range(1, self.xNum - 1):
-            for j in range(1, self.yNum - 1):
+        for i in range(1, self.xNum):
+            for j in range(1, self.yNum):
     #			cnt++
                 
                 # u component
@@ -234,14 +234,20 @@ class fluid:
         for y in range(self.yNum):      # ver
             for x in range(self.xNum):  # hor
                 num = x * self.yNum + y 
-                if y == 0 or x == 0 or y == self.yNum - 1:
+                if y == 0 or y == self.yNum - 1:
                     self.s[num] = 0.0
                 else:
                     self.s[num] = 1.0
 
     def create_obstable(self, xPos, yPos, radius):
-        for x in range(self.xNum):
-            for y in range(self.yNum):
+        for x in range(1, self.xNum - 2):
+            for y in range(1, self.yNum - 2):
+                # if (pow(xPos - x, 2) + pow(yPos - y, 2) < pow(radius, 2)):
+                #     self.s[(x) * self.yNum + y] = 0
+                #     self.s[(x) * self.yNum + y] = 0
+
+                dx = (x + 0.5) * self.height - x
+                dy = (y + 0.5) * self.height - y
                 if (pow(xPos - x, 2) + pow(yPos - y, 2) < pow(radius, 2)):
                     self.s[(x) * self.yNum + y] = 0
                     self.s[(x) * self.yNum + y] = 0
@@ -275,7 +281,7 @@ class fluid:
 
         self.integrate(dt, gravity)
         
-        self.p = [0.0 for _ in range(0, self.num_cells)] 
+        self.p = [0.0 for _ in range(self.num_cells)] 
         self.incompressibility_solver(numIters, dt)
         
         self.boundary_conditions()
@@ -311,14 +317,21 @@ def get_sci_color(val, min_val, max_val):
 
       
 
-window_width = 50
-window_height = 25
+window_width = 80
+window_height = 50
 
-cell_height = 3
+cell_height = 10
 
-tunnel = fluid(1000.0, window_width, window_height, cell_height)
+tunnel = fluid(1000.0, window_width, window_height, 0.1)
 tunnel.setup_walls()
-tunnel.create_obstable(15, int(window_height / 2) + 1, 4)
+tunnel.create_obstable(15, tunnel.yNum / 2 - 1, 5)
+
+
+# tunnel.s[5 * 5 + 2] = 0
+# tunnel.m[5 * 5 + 2] = 1
+
+
+
 
 pygame.init()
 screen = pygame.display.set_mode(((window_width * cell_height), (window_height * cell_height)))
@@ -335,7 +348,7 @@ while not (done):
     gravity = 0
     # for _ in range(12):
         # tunnel.p[_] = 0.0
-    tunnel.simulate(0.1, gravity, 100, 80)
+    tunnel.simulate(0.02, gravity, 100, 80)
     # tunnel.simulate(1.0 / 120, 9.81, 100, )
 
     
@@ -371,10 +384,10 @@ while not (done):
         maxM = max(maxM, tunnel.m[i]) + 0.0005
 
     # print(maxM, minM)
-    print(maxP, minP)
-    for _ in range(tunnel.xNum):
-        print(_, tunnel.p[_ * tunnel.yNum + 15])
-        print(_, tunnel.p[_ * tunnel.yNum + 5])
+    # print(maxP, minP)
+    # for _ in range(tunnel.xNum):
+    #     print(_, tunnel.p[_ * tunnel.yNum + 15])
+    #     print(_, tunnel.p[_ * tunnel.yNum + 5])
     screen.fill((0, 0, 0))
     
     # debug
@@ -406,21 +419,21 @@ while not (done):
             # r = colour[0] - valM
             # g = colour[1] - valM
             # b = colour[2] - valM
-
-            r = colour[0] - (255 - valM)
-            g = colour[1] - (255 - valM)
-            b = colour[2] - (255 - valM)
-
-            # r = colour[0]
-            # g = colour[1] 
-            # b = colour[2] 
+            if not 0:
+                r = colour[0] - (255 - valM)
+                g = colour[1] - (255 - valM)
+                b = colour[2] - (255 - valM)
+            else:
+                r = colour[0]
+                g = colour[1] 
+                b = colour[2] 
 
             r = max(0, min(r, 255))
             b = max(0, min(b, 255))
             g = max(0, min(g, 255))
 
             if tunnel.s[num] == 0:
-                r, g, b = 255, 0, 0
+                r, g, b = 255, 0, 255
 
             # If you want to skip the 1-cell buffer borders:
             if 1 <= x < tunnel.xNum - 1 and 1 <= y < tunnel.yNum - 1:
